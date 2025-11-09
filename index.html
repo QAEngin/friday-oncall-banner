@@ -163,18 +163,18 @@
     let shiftDateText = "";
     let latestDate = null;
 
-    // Find the latest shift date (<= today)
+    // Find the nearest upcoming shift date (>= today)
     rows.slice(1).forEach(row => {
       const shiftDate = parseSheetDate(row[3]);
-      if (shiftDate && shiftDate <= today) {
-        if (!latestDate || shiftDate > latestDate) {
+      if (shiftDate && shiftDate >= today) {
+        if (!latestDate || shiftDate < latestDate) {
           latestDate = shiftDate;
           currentName = row[0];
           shiftDateText = formatDateDDMMYYYY(shiftDate);
         }
       }
     });
-
+    
     document.getElementById("dutyName").textContent = currentName;
     document.getElementById("dutyDate").textContent = shiftDateText ? `(${shiftDateText})` : "";
 
@@ -193,3 +193,4 @@
 
 </body>
 </html>
+
