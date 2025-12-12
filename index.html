@@ -154,43 +154,49 @@
   }
 
   async function fetchData() {
-    const res = await fetch(sheetUrl);
-    const text = await res.text();
-    const rows = text.split("\n").map(r => r.split(","));
+  const res = await fetch(sheetUrl);
+  const text = await res.text();
+  const rows = text.split("\n").map(r => r.split(","));
 
-    const today = new Date();
-    let currentName = "לא נמצא כונן";
-    let shiftDateText = "";
-    let latestDate = null;
+  const today = new Date();
+  today.setHours(0,0,0,0); // start of today
 
-    // Find the nearest upcoming shift date (>= today)
-    rows.slice(1).forEach(row => {
-      const shiftDate = parseSheetDate(row[3]);
-      if (shiftDate && shiftDate >= today) {
-        if (!latestDate || shiftDate < latestDate) {
-          latestDate = shiftDate;
-          currentName = row[0];
-          shiftDateText = formatDateDDMMYYYY(shiftDate);
-        }
+  let currentName = "לא נמצא כונן";
+  let shiftDateText = "";
+  let latestDate = null;
+
+  // Find the nearest upcoming shift date (>= today)
+  rows.slice(1).forEach(row => {
+    const shiftDate = parseSheetDate(row[3]);
+    if (shiftDate) shiftDate.setHours(0,0,0,0); // normalize too
+
+    if (shiftDate && shiftDate >= today) {
+      if (!latestDate || shiftDate < latestDate) {
+        latestDate = shiftDate;
+        currentName = row[0];
+        shiftDateText = formatDateDDMMYYYY(shiftDate);
       }
-    });
-    
-    document.getElementById("dutyName").textContent = currentName;
-    document.getElementById("dutyDate").textContent = shiftDateText ? `(${shiftDateText})` : "";
+    }
+  });
 
-    // Show all workers
-    const workersUl = document.getElementById("workers");
-    workersUl.innerHTML = "";
-    rows.slice(1).forEach(row => {
-      const li = document.createElement("li");
-      li.textContent = row[0];
-      workersUl.appendChild(li);
-    });
-  }
+  document.getElementById("dutyName").textContent = currentName;
+  document.getElementById("dutyDate").textContent = shiftDateText ? `(${shiftDateText})` : "";
+
+  // Show all workers
+  const workersUl = document.getElementById("workers");
+  workersUl.innerHTML = "";
+  rows.slice(1).forEach(row => {
+    const li = document.createElement("li");
+    li.textContent = row[0];
+    workersUl.appendChild(li);
+  });
+}
+
 
   fetchData();
 </script>
 
 </body>
 </html>
+
 
