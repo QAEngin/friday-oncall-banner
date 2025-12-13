@@ -130,21 +130,18 @@
   <script>
   const sheetUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT__alDn1wfLtYqBvnbj5Q1I3XKl6-_NiVOfinXaRbX3ja4dlHEshouMqMz952KpLHapqLnyBAR9Cnr/pub?output=csv";
 
-  // Parse dates reliably in dd/mm/yyyy or mm/dd/yyyy formats
   function parseSheetDate(str) {
     if (!str) return null;
     const clean = str.replace(/[^\d/.-]/g, "").trim();
     const parts = clean.split(/[\/.\-]/);
     if (parts.length === 3) {
-      let [a, b, c] = parts.map(Number);
-      if (c < 100) c += 2000;
-      // always treat as dd/mm/yyyy because that’s your Sheet format
-      return new Date(c, b - 1, a);
+      let [d, m, y] = parts.map(Number);
+      if (y < 100) y += 2000;
+      return new Date(y, m - 1, d); // dd/mm/yyyy
     }
     return null;
   }
 
-  // Format date as dd/mm/yyyy always
   function formatDateDDMMYYYY(date) {
     if (!(date instanceof Date) || isNaN(date)) return "";
     const dd = String(date.getDate()).padStart(2, "0");
@@ -154,49 +151,53 @@
   }
 
   async function fetchData() {
-  const res = await fetch(sheetUrl);
-  const text = await res.text();
-  const rows = text.split("\n").map(r => r.split(","));
+    const res = await fetch(sheetUrl);
+    const text = await res.text();
 
-  const today = new Date();
-  today.setHours(0,0,0,0); // start of today
+    const rows = text.trim().split(/\r?\n/).map(r => r.split(","));
 
-  let currentName = "לא נמצא כונן";
-  let shiftDateText = "";
-  let latestDate = null;
+    const today = new Date();
+    today.setHours(0,0,0,0);
 
-  // Find the nearest upcoming shift date (>= today)
-  rows.slice(1).forEach(row => {
-    const shiftDate = parseSheetDate(row[3]);
-    if (shiftDate) shiftDate.setHours(0,0,0,0); // normalize too
+    let bestUpcoming = null; // nearest >= today
+    let bestPast = null;     // latest < today
 
-    if (shiftDate && shiftDate >= today) {
-      if (!latestDate || shiftDate < latestDate) {
-        latestDate = shiftDate;
-        currentName = row[0];
-        shiftDateText = formatDateDDMMYYYY(shiftDate);
+    rows.slice(1).forEach(row => {
+      const shiftDate = parseSheetDate(row[3]);
+      if (!shiftDate) return;
+
+      shiftDate.setHours(0,0,0,0);
+
+      if (shiftDate >= today) {
+        if (!bestUpcoming || shiftDate < bestUpcoming.date) {
+          bestUpcoming = { name: row[0], date: shiftDate };
+        }
+      } else {
+        if (!bestPast || shiftDate > bestPast.date) {
+          bestPast = { name: row[0], date: shiftDate };
+        }
       }
-    }
-  });
+    });
 
-  document.getElementById("dutyName").textContent = currentName;
-  document.getElementById("dutyDate").textContent = shiftDateText ? `(${shiftDateText})` : "";
+    const chosen = bestUpcoming || bestPast;
 
-  // Show all workers
-  const workersUl = document.getElementById("workers");
-  workersUl.innerHTML = "";
-  rows.slice(1).forEach(row => {
-    const li = document.createElement("li");
-    li.textContent = row[0];
-    workersUl.appendChild(li);
-  });
-}
+    document.getElementById("dutyName").textContent = chosen ? chosen.name : "לא נמצא כונן";
+    document.getElementById("dutyDate").textContent = chosen ? `(${formatDateDDMMYYYY(chosen.date)})` : "";
 
+    const workersUl = document.getElementById("workers");
+    workersUl.innerHTML = "";
+    rows.slice(1).forEach(row => {
+      const li = document.createElement("li");
+      li.textContent = row[0];
+      workersUl.appendChild(li);
+    });
+  }
 
   fetchData();
 </script>
 
 </body>
 </html>
+
 
 
